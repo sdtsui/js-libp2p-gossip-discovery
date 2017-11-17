@@ -4,7 +4,7 @@ const PeerInfo = require('peer-info')
 const PeerId = require('peer-id')
 const pull = require('pull-stream')
 const Pushable = require('pull-pushable')
-const Reader = require('pull-reader')
+const Reader = require('pull-reader') // pull-reader...
 const debug = require('debug')
 const log = debug('discovery:gossip')
 debug.enable('discovery:gossip')
@@ -73,9 +73,11 @@ module.exports = class handlePeers extends EventEmitter {
 
   _peerDiscovery (node, targetNumberOfPeers, newPeers) {
     let knownPeers = node.peerBook.getAllArray()
+
+    // if we want more peers, and more peers exist
     if (knownPeers.length < targetNumberOfPeers && newPeers.length !== 0) {
       newPeers.forEach(peer => {
-        peer._askedForPeers = true
+        peer._askedForPeers = true // what is this for?
         node.dial(peer, PROTO, async (err, conn) => {
           if (err) {
             // remove peers that we cannot connect to
@@ -85,6 +87,9 @@ module.exports = class handlePeers extends EventEmitter {
               const peers = await readPeers(node, conn)
               const newPeers = await this.filterPeers(node, peers)
               return this._peerDiscovery(node, targetNumberOfPeers, newPeers)
+
+              // if any errors: assume malicious, remove from our list
+              // Note: could extend peerbook to track reputation...
             } catch (e) {
               // remove peers that are potinal malicous
               node.hangUp(peer, () => {
@@ -101,6 +106,8 @@ module.exports = class handlePeers extends EventEmitter {
   filterPeers (node, peers) {
     const ids = Object.keys(peers)
     const newPeers = []
+    // could async filter first, instead of doing a forEach -- should be more performant...
+    // at least, more readable...
     ids.forEach(async id => {
       try {
         node.peerBook.get(id)

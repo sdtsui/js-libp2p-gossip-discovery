@@ -28,7 +28,6 @@ module.exports = class handlePeers extends EventEmitter {
    * starts the gossip process
    */
   start (cb) {
-    console.log("gossip: START")
     const node = this.node
     node.handle(PROTO, (proto, conn) => {
       const p = Pushable()
@@ -53,7 +52,6 @@ module.exports = class handlePeers extends EventEmitter {
    * stop discovery
    */
   stop () {
-    console.log("gossip: STOP")
     this.node.unhandle(PROTO)
     this.node.removeListener('peer:connect', this._onConnection)
   }

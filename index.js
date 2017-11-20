@@ -52,6 +52,7 @@ module.exports = class handlePeers extends EventEmitter {
    * stop discovery
    */
   stop () {
+    console.log("stop called")
     this.node.unhandle(PROTO)
     this.node.removeListener('peer:connect', this._onConnection)
   }
@@ -80,6 +81,7 @@ module.exports = class handlePeers extends EventEmitter {
     // If we want more peers, and more peers exist
     if (knownPeers.length < targetNumberOfPeers && newPeers.length !== 0) {
       newPeers.forEach(peer => {
+        console.log("peer:", peer.id._idB58String)
         // Check if attempting to discover self, break if so.
         if (node.peerInfo.id._idB58String === peer.id._idB58String) {
           node.peerBook.remove(peer)
@@ -87,21 +89,37 @@ module.exports = class handlePeers extends EventEmitter {
         }
 
         peer._askedForPeers = true
+        console.log("about to dial...")
+        console.log("node isStarted...", node.isStarted())
+
+        if (!node.isStarted()) {
+          // Node is not started yet, break
+          return
+        }
+
         node.dial(peer, PROTO, async (err, conn) => {
+          console.log("inside dial...", err)
           if (err) {
             // Remove peers that we cannot connect to
             node.peerBook.remove(peer)
           } else {
             try {
+              console.log("before readPeers")
+              console.log("me:", node.peerInfo.id._idB58String)
+              console.log("peer:", peer.id._idB58String)
               const peers = await readPeers(node, conn)
+              console.log("before filterPeers")
               const newPeers = await this.filterPeers(node, peers)
+              console.log("before _peerDiscovery")
               return this._peerDiscovery(node, targetNumberOfPeers, newPeers)
 
               // If any errors: assume malicious, remove from our list
               // TODO: extend peerbook to track reputation...
             } catch (e) {
+              console.log("caught..", e)
               // Remove peers that are potentially malicous
               node.hangUp(peer, () => {
+                console.log("hanging up...")
                 node.peerBook.remove(peer)
                 node.emit('error', peer)
               })
@@ -136,15 +154,23 @@ module.exports = class handlePeers extends EventEmitter {
 }
 
 function readPeers (node, conn) {
+  console.log('inside readpeers')
   const reader = Reader()
+  console.log("before pull")
   pull(conn, reader)
+  console.log("before promise")
   return new Promise((resolve, reject) => {
+    console.log("inside promise")
     reader.read(1, (err, len) => {
+      console.log("inside .read", err, len)
       if (err) {
         reject(err)
       } else if (len[0] !== 0) {
+        console.log("inside else if")
         reader.read(len[0], (err, data) => {
+          console.log("inside 2nd read", err, data)
           if (err) {
+            console.log("reject err", err)
             reject(err)
           } else {
             data = data.toString()
